@@ -23,6 +23,7 @@ const checkoutProducts = await (async () => {
 })();
 
 export const auth = betterAuth({
+  secret: process.env.BETTER_AUTH_SECRET,
   socialProviders: {
     google: {
       prompt: "select_account", // This will force the user to select an account
