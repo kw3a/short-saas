@@ -1,6 +1,12 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Play, MessageSquare, Plus } from "lucide-react"
 import Image from "next/image"
+
+export const metadata: Metadata = {
+  title: "Dashboard — ViralShort",
+  description: "Start creating faceless short videos. Access tools, buy credits, and manage your content.",
+}
 
 export default function DashboardPage() {
   const assetsURL = process.env.NEXT_PUBLIC_ASSETS_URL

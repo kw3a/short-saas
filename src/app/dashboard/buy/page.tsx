@@ -1,6 +1,12 @@
+import type { Metadata } from "next"
 import { PricingPlans } from "@/components/pricing-plans"
 import { getActivePricingPlans } from "@/lib/pricing"
 import { CircleDollarSign } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Buy Credits — ViralShort",
+  description: "Purchase credits to generate AI faceless short videos. One-time payment, no subscriptions.",
+}
 
 export default function DashboardBuyCreditsPage() {
   const plans = getActivePricingPlans()

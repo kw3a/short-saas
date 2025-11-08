@@ -1,4 +1,10 @@
+import type { Metadata } from "next"
 import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "Terms of Service — ViralShort",
+  description: "Read the Terms of Service for ViralShort, including acceptable use, payments, and account terms.",
+}
 
 export default function PrivacyPage() {
   return (

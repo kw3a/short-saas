@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { NavBar } from "@/components/navbar"
 import { PricingPlans } from "@/components/pricing-plans"
 import { getActivePricingPlans } from "@/lib/pricing"
@@ -6,6 +7,11 @@ import { Features } from "@/components/features"
 import { FAQ } from "@/components/faq"
 import { Products } from "@/components/products"
 import { Footer } from "@/components/footer"
+
+export const metadata: Metadata = {
+  title: "ViralShort — AI Faceless Video Generator",
+  description: "Create viral faceless short videos from scripts or AskReddit threads. Generate subtitles, voiceover, and cinematic backgrounds.",
+}
 
 export default function Home() {
   const pricingPlans = getActivePricingPlans()

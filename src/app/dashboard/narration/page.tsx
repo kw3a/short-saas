@@ -1,4 +1,10 @@
+import type { Metadata } from "next"
 import NarratedVideoForm from "@/components/narrated-video-form"
+
+export const metadata: Metadata = {
+  title: "Narrated Story Generator — ViralShort",
+  description: "Turn your script into a faceless short video with AI voiceover, subtitles, and cinematic backgrounds.",
+}
 
 export default function DashboardGeneratePage() {
   return (

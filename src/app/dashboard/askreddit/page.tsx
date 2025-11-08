@@ -1,4 +1,10 @@
+import type { Metadata } from "next"
 import { AskRedditVideoForm } from "@/components/askreddit-video-form"
+
+export const metadata: Metadata = {
+  title: "AskReddit Video Generator — ViralShort",
+  description: "Create engaging AskReddit-style short videos from a title and comments, with AI voiceover and captions.",
+}
 
 export default function DashboardAskRedditPage() {
   return (
