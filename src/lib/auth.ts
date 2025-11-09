@@ -6,11 +6,10 @@ import { Polar } from "@polar-sh/sdk";
 import { getCheckoutProducts } from "@/lib/pricing";
 import { processOrderPaid } from "@/lib/order-paid";
 import { processOrderRefunded } from "@/lib/order-refunded";
-import { giveWelcomeBonus } from "./welcomeBonus";
 
 export const polarClient = new Polar({
   accessToken: process.env.POLAR_ACCESS_TOKEN,
-  server: "sandbox",
+  server: process.env.ENVIRONMENT === "production" ? "production" : "sandbox",
 });
 
 const checkoutProducts = await (async () => {
