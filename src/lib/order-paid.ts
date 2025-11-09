@@ -38,7 +38,7 @@ export async function processOrderPaid(payload: WebhookOrderPaidPayload) {
     } else {
       await tx
         .update(balance)
-        .set({ totalCredits: (existing[0].totalCredits ?? 0) + creditsToAdd })
+        .set({ totalCredits: (existing[0].totalCredits ?? 0) + creditsToAdd, payingUser: true })
         .where(eq(balance.userId, externalUserId))
     }
 
