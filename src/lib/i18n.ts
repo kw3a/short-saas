@@ -3,9 +3,7 @@ export type Locale = "en" | "es"
 export const supportedLocales: Locale[] = ["en", "es"]
 
 export function detectLocale(acceptLanguage: string | null | undefined): Locale {
-  if (!acceptLanguage) return "en"
-  const lower = acceptLanguage.toLowerCase()
-  if (lower.startsWith("es")) return "es"
+  // Browser language is intentionally ignored; default to English
   return "en"
 }
 
