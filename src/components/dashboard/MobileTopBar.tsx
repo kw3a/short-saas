@@ -1,19 +1,31 @@
 "use client"
 
 import { Menu, X, Play, MessageSquare, Image as ImageIcon, History, Clock, CircleDollarSign, Plus, User } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { LoginModal } from "@/components/login-modal"
 import { useCredits } from "@/contexts/CreditBalanceContext"
 import { Logo } from "@/components/logo"
+import { LanguageToggle } from "@/components/language-toggle"
+import type { DashboardMessages } from "@/lib/i18n"
 
-export default function MobileTopBar() {
+type MobileMessages = DashboardMessages["mobile"]
+
+export default function MobileTopBar({ messages }: { messages: MobileMessages }) {
   const { data: session, isPending } = authClient.useSession() as any
   const [open, setOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const { credits, isLoading: creditsLoading } = useCredits()
+
+  useEffect(() => {
+    const openHandler = () => setLoginOpen(true)
+    window.addEventListener("open-login", openHandler as EventListener)
+    return () => {
+      window.removeEventListener("open-login", openHandler as EventListener)
+    }
+  }, [])
 
   return (
     <div className="md:hidden sticky top-0 z-20 bg-zinc-950 border-b border-zinc-800 h-12 px-3 flex items-center justify-between">
@@ -28,16 +40,15 @@ export default function MobileTopBar() {
         <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setOpen(false)}>
           <div className="absolute right-0 top-0 bottom-0 w-72 bg-zinc-950 border-l border-zinc-800 p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <div className="text-white font-semibold">Menu</div>
+              <div className="text-white font-semibold">{messages.menuTitle}</div>
               <button aria-label="Close menu" className="text-zinc-300" onClick={() => setOpen(false)}>
                 <X size={18} />
               </button>
             </div>
 
             <div className="space-y-6">
-              {/* Video Generation Section */}
               <div>
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">Video Generation</h3>
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">{messages.videoGenerationSection}</h3>
                 <nav className="space-y-1 text-sm">
                   <Link 
                     href="/dashboard/narration" 
@@ -45,7 +56,7 @@ export default function MobileTopBar() {
                     className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors"
                   >
                     <Play className="w-4 h-4" />
-                    <span>Narrated Story</span>
+                    <span>{messages.narrationLink}</span>
                   </Link>
                   <Link 
                     href="/dashboard/askreddit" 
@@ -53,14 +64,13 @@ export default function MobileTopBar() {
                     className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    <span>AskReddit</span>
+                    <span>{messages.askredditLink}</span>
                   </Link>
                 </nav>
               </div>
 
-              {/* History Section */}
               <div>
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">History</h3>
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">{messages.historySection}</h3>
                 <nav className="space-y-1 text-sm">
                   <Link 
                     href="/dashboard/gallery" 
@@ -68,7 +78,7 @@ export default function MobileTopBar() {
                     className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors"
                   >
                     <ImageIcon className="w-4 h-4" />
-                    <span>Gallery</span>
+                    <span>{messages.galleryLink}</span>
                   </Link>
                   <Link 
                     href="/dashboard/purchases" 
@@ -76,7 +86,7 @@ export default function MobileTopBar() {
                     className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors"
                   >
                     <History className="w-4 h-4" />
-                    <span>Purchase History</span>
+                    <span>{messages.purchaseHistoryLink}</span>
                   </Link>
                   <Link 
                     href="/dashboard/credits" 
@@ -84,7 +94,7 @@ export default function MobileTopBar() {
                     className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors"
                   >
                     <Clock className="w-4 h-4" />
-                    <span>Credit History</span>
+                    <span>{messages.creditHistoryLink}</span>
                   </Link>
                 </nav>
               </div>
@@ -101,12 +111,12 @@ export default function MobileTopBar() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 px-3 py-2 text-sm bg-zinc-800/50 rounded-lg">
                         <CircleDollarSign size={16} className="text-yellow-400" />
-                        <span>{creditsLoading ? 'Loading...' : credits?.toLocaleString() || 0} credits</span>
+                        <span>{creditsLoading ? messages.creditsLoading : `${credits?.toLocaleString() || 0} ${messages.creditsSuffix}`}</span>
                       </div>
                       <Link 
                         href="/dashboard/buy" 
                         className="p-1.5 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 hover:text-yellow-300 transition-colors"
-                        title="Buy more credits"
+                        title={messages.buyCreditsTitle}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Plus className="w-4 h-4" />
@@ -118,15 +128,18 @@ export default function MobileTopBar() {
                     onClick={() => authClient.signOut().then(() => { window.location.href = "/" })} 
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
                   >
-                    Sign Out
+                    {messages.signOut}
                   </Button>
                 </div>
               ) : (
                 <>
-                  <Button onClick={() => setLoginOpen(true)} className="w-full bg-white text-zinc-900 hover:bg-zinc-100">Log in</Button>
+                  <Button onClick={() => setLoginOpen(true)} className="w-full bg-white text-zinc-900 hover:bg-zinc-100">{messages.logIn}</Button>
                   <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
                 </>
               )}
+            </div>
+            <div className="mt-4">
+              <LanguageToggle size="full" onBeforeToggle={() => setOpen(false)} />
             </div>
           </div>
         </div>

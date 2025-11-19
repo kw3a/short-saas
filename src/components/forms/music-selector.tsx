@@ -14,6 +14,7 @@ interface MusicSelectorProps {
   onPreview: (value: string) => void
   onStopPreview: () => void
   playingMusic: string | null
+  label?: string
 }
 
 export function MusicSelector({
@@ -22,7 +23,8 @@ export function MusicSelector({
   onSelect,
   onPreview,
   onStopPreview,
-  playingMusic
+  playingMusic,
+  label,
 }: MusicSelectorProps) {
   const handlePreview = (e: React.MouseEvent, value: string) => {
     e.stopPropagation()
@@ -31,7 +33,7 @@ export function MusicSelector({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm text-zinc-300">Background Music (Optional)</label>
+      <label className="text-sm text-zinc-300">{label ?? "Background Music (Optional)"}</label>
       <div className="custom-scrollbar flex gap-2 py-1 overflow-x-auto snap-x snap-mandatory min-w-0">
         {musicOptions.map((m) => (
           <div

@@ -1,15 +1,59 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import authClient from "@/lib/auth-client"
 import { CircleDollarSign, Check } from "lucide-react"
 import { PricingPlan } from "@/lib/pricing"
+import type { Locale } from "@/lib/i18n"
+
+const pricingTexts: Record<Locale, {
+  mostPopular: string
+  saveLabel: string // prefix before percentage
+  minutesSuffix: string
+  noWatermark: string
+  redirecting: string
+  choose: string
+}> = {
+  en: {
+    mostPopular: "Most Popular",
+    saveLabel: "Save",
+    minutesSuffix: "minutes of videos",
+    noWatermark: "No watermark",
+    redirecting: "Redirecting...",
+    choose: "Choose",
+  },
+  es: {
+    mostPopular: "Más popular",
+    saveLabel: "Ahorra",
+    minutesSuffix: "minutos de video",
+    noWatermark: "Sin marca de agua",
+    redirecting: "Redirigiendo...",
+    choose: "Elegir",
+  },
+}
+
+function getInitialLocale(): Locale {
+  if (typeof document === "undefined") return "en"
+  const match = document.cookie.match(/(?:^|; )lang=(en|es)(?:;|$)/)
+  return (match?.[1] as Locale | undefined) ?? "en"
+}
 
 export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
   const { data: session } = authClient.useSession()
   const [loading, setLoading] = useState<string | null>(null)
+  const [locale, setLocale] = useState<Locale>(getInitialLocale)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = getInitialLocale()
+      setLocale((prev) => (prev === next ? prev : next))
+    }, 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  const t = pricingTexts[locale] ?? pricingTexts.en
 
   const handleSubscribe = async (slug: string) => {
     try {
@@ -32,7 +76,7 @@ export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
         <div key={plan.name} className="relative h-full">
           {plan.highlight && (
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap z-10">
-              Most Popular
+              {t.mostPopular}
             </div>
           )}
           <Card
@@ -50,7 +94,7 @@ export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
                 </CardTitle>
                 {plan.savings > 0 && (
                   <span className="text-sm font-medium text-green-400">
-                    Save {plan.savings}%
+                    {t.saveLabel} {plan.savings}%
                   </span>
                 )}
               </div>
@@ -63,7 +107,7 @@ export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
               </span>
             </CardDescription>
             <div className="text-zinc-500 text-xs sm:text-sm mt-0.5">
-              ~ {(plan.credits / 1000).toLocaleString()} minutes of videos
+              ~ {(plan.credits / 1000).toLocaleString()} {t.minutesSuffix}
             </div>
             <div className="mt-3 h-px bg-zinc-800" />
           </CardHeader>
@@ -71,7 +115,7 @@ export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
             <ul className="space-y-2 text-sm text-zinc-300 mb-4">
               <li className="flex items-center gap-2">
                 <Check size={16} className="text-green-500" />
-                No watermark
+                {t.noWatermark}
               </li>
             </ul>
             <div className="mb-4 h-px bg-zinc-800" />
@@ -84,7 +128,7 @@ export function PricingPlans({ plans }: { plans: PricingPlan[] }) {
                   : "mt-auto w-full h-10 text-base bg-white text-zinc-900 hover:bg-zinc-100"
               }
             >
-              {loading === plan.slug ? "Redirecting..." : `Choose`}
+              {loading === plan.slug ? t.redirecting : t.choose}
             </Button>
           </CardContent>
           </Card>

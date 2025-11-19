@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from "next/link"
 import { useCredits } from "@/contexts/CreditBalanceContext"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { LoginModal } from "@/components/login-modal"
 import { Logo } from "@/components/logo"
+import { LanguageToggle } from "@/components/language-toggle"
 import { 
   CircleDollarSign, 
   Plus, 
@@ -18,12 +19,23 @@ import {
   MessageSquare,
   Image as ImageIcon 
 } from "lucide-react"
+import type { DashboardMessages } from "@/lib/i18n"
 
-export default function Sidebar() {
+type SidebarMessages = DashboardMessages["sidebar"]
+
+export default function Sidebar({ messages }: { messages: SidebarMessages }) {
   const { data: session, isPending } = authClient.useSession() as any
   const [loginOpen, setLoginOpen] = useState(false)
   const { credits, isLoading: creditsLoading } = useCredits()
   const sessionLoading = Boolean(isPending)
+
+  useEffect(() => {
+    const openHandler = () => setLoginOpen(true)
+    window.addEventListener("open-login", openHandler as EventListener)
+    return () => {
+      window.removeEventListener("open-login", openHandler as EventListener)
+    }
+  }, [])
 
   return (
     <aside className="w-64 shrink-0 h-full overflow-y-auto border-r border-zinc-800 bg-zinc-950 p-4 hidden md:flex md:flex-col">
@@ -34,38 +46,39 @@ export default function Sidebar() {
       
       {/* Main Navigation */}
       <nav className="flex-1 space-y-6">
-        {/* Video Generation Section */}
         <div>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">Video Generation</h3>
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">{messages.videoGenerationSection}</h3>
           <div className="space-y-1">
             <Link href="/dashboard/narration" className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors">
               <Play className="w-4 h-4" />
-              <span>Narrated Story</span>
+              <span>{messages.narrationLink}</span>
             </Link>
             <Link href="/dashboard/askreddit" className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors">
               <MessageSquare className="w-4 h-4" />
-              <span>AskReddit</span>
+              <span>{messages.askredditLink}</span>
             </Link>
           </div>
         </div>
 
-        {/* History Section */}
         <div>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">History</h3>
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 px-3">{messages.historySection}</h3>
           <div className="space-y-1">
             <Link href="/dashboard/gallery" className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors">
               <ImageIcon className="w-4 h-4" />
-              <span>Gallery</span>
+              <span>{messages.galleryLink}</span>
             </Link>
             <Link href="/dashboard/purchases" className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors">
               <History className="w-4 h-4" />
-              <span>Purchase History</span>
+              <span>{messages.purchaseHistoryLink}</span>
             </Link>
             <Link href="/dashboard/credits" className="flex items-center gap-2 px-3 py-2 rounded text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors">
               <Clock className="w-4 h-4" />
-              <span>Credit History</span>
+              <span>{messages.creditHistoryLink}</span>
             </Link>
           </div>
+        </div>
+        <div className="px-3 pt-4">
+          <LanguageToggle size="full" />
         </div>
       </nav>
 
@@ -83,13 +96,13 @@ export default function Sidebar() {
                   <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-800">
                     <CircleDollarSign size={18} className="text-yellow-400" />
                     <span className="text-sm">
-                      {creditsLoading ? 'Loading...' : credits?.toLocaleString()} credits
+                      {creditsLoading ? messages.creditsLoading : `${credits?.toLocaleString()} ${messages.creditsSuffix}`}
                     </span>
                   </div>
                   <Link 
                     href="/dashboard/buy" 
                     className="p-1.5 rounded-md bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 hover:text-yellow-300 transition-colors"
-                    title="Buy more credits"
+                    title={messages.buyCreditsTitle}
                   >
                     <Plus className="w-4 h-4" />
                   </Link>
@@ -111,7 +124,7 @@ export default function Sidebar() {
                 size="icon" 
                 onClick={() => authClient.signOut().then(() => { window.location.href = "/" })}
                 className="text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                title="Sign out"
+                title={messages.signOut}
               >
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -123,7 +136,7 @@ export default function Sidebar() {
               onClick={() => setLoginOpen(true)} 
               className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
             >
-              Sign In
+              {messages.signIn}
             </Button>
             <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
           </div>

@@ -11,16 +11,18 @@ interface BackgroundSelectorProps {
   backgrounds: BackgroundOption[]
   selectedBackground: string
   onSelect: (value: string) => void
+  label?: string
 }
 
 export function BackgroundSelector({
   backgrounds,
   selectedBackground,
-  onSelect
+  onSelect,
+  label,
 }: BackgroundSelectorProps) {
   return (
     <div className="space-y-2">
-      <label className="text-sm text-zinc-300">Background Video</label>
+      <label className="text-sm text-zinc-300">{label ?? "Background Video"}</label>
       <div className="custom-scrollbar flex gap-4 py-2 overflow-x-auto snap-x snap-mandatory min-w-0">
         {backgrounds.map((bg) => (
           <button 

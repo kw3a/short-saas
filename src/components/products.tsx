@@ -3,40 +3,46 @@
 import Link from "next/link"
 import { Button } from "./ui/button"
 import { Play, MessageSquare, Zap } from "lucide-react"
+import type { LandingMessages } from "@/lib/i18n"
+import { landingMessages } from "@/lib/i18n"
 
-const products = [
-  {
-    id: "narration",
-    name: "Narrated Story",
-    description: "Create engaging narrated stories with AI voiceovers and visuals.",
-    icon: <Play className="w-6 h-6 text-blue-500" />,
-    href: "/dashboard/narration"
-  },
-  {
-    id: "askreddit",
-    name: "AskReddit Videos",
-    description: "Turn popular Reddit threads into engaging video content automatically.",
-    icon: <MessageSquare className="w-6 h-6 text-blue-400" />,
-    href: "/dashboard/askreddit"
-  },
-  {
-    id: "coming-soon",
-    name: "More Coming Soon",
-    description: "We're constantly adding new video generation types. Stay tuned!",
-    icon: <Zap className="w-6 h-6 text-blue-300" />,
-    href: "#",
-    disabled: true
-  }
-]
+type ProductsMessages = LandingMessages["products"]
 
-export function Products() {
+const defaultMessages = landingMessages.en.products
+
+export function Products({ messages }: { messages?: ProductsMessages }) {
+  const m = messages ?? defaultMessages
+  const products = [
+    {
+      id: "narration",
+      name: m.items.narrationName,
+      description: m.items.narrationDescription,
+      icon: <Play className="w-6 h-6 text-blue-500" />,
+      href: "/dashboard/narration",
+    },
+    {
+      id: "askreddit",
+      name: m.items.askredditName,
+      description: m.items.askredditDescription,
+      icon: <MessageSquare className="w-6 h-6 text-blue-400" />,
+      href: "/dashboard/askreddit",
+    },
+    {
+      id: "coming-soon",
+      name: m.items.comingSoonName,
+      description: m.items.comingSoonDescription,
+      icon: <Zap className="w-6 h-6 text-blue-300" />,
+      href: "#",
+      disabled: true,
+    },
+  ]
   return (
     <section id="products" className="py-20 bg-zinc-900/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Video Generation Products</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{m.sectionTitle}</h2>
           <p className="text-zinc-400 max-w-2xl mx-auto">
-            Choose the perfect video type for your content needs. Each product is designed to help you create engaging content effortlessly.
+            {m.sectionSubtitle}
           </p>
         </div>
         
@@ -59,12 +65,12 @@ export function Products() {
                   className="w-full border-zinc-700 text-zinc-400 cursor-not-allowed"
                   disabled
                 >
-                  Coming Soon
+                  {m.items.comingSoonCta}
                 </Button>
               ) : (
                 <Link href={product.href} className="block">
                   <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    Try {product.name}
+                    {m.items.tryPrefix}{product.name}
                   </Button>
                 </Link>
               )}

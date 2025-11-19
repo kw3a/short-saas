@@ -14,6 +14,9 @@ import { PreviewPanel } from "./forms/preview-panel"
 import { useCredits } from "@/contexts/CreditBalanceContext"
 import { playAudioPreview, stopAudioPreview } from "@/lib/audioPreview"
 import { computeAskRedditCredits } from "@/lib/creditCalculation"
+import type { DashboardMessages } from "@/lib/i18n"
+
+type AskRedditFormMessages = DashboardMessages["forms"]["askreddit"]
 
 function CommentField({
   value,
@@ -23,6 +26,7 @@ function CommentField({
   maxLength,
   maxTotalLength,
   totalLength,
+  labelPrefix,
 }: {
   value: string
   onChange: (value: string) => void
@@ -31,6 +35,7 @@ function CommentField({
   maxLength: number
   maxTotalLength: number
   totalLength: number
+  labelPrefix: string
 }) {
   const taRef = useRef<HTMLTextAreaElement>(null)
   const remainingChars = maxLength - value.length
@@ -46,7 +51,7 @@ function CommentField({
   return (
     <div className="space-y-1.5 min-w-0">
       <div className="flex justify-between items-center">
-        <label className="text-sm text-zinc-300">Comment {index + 1}</label>
+        <label className="text-sm text-zinc-300">{labelPrefix} {index + 1}</label>
         <button
           type="button"
           onClick={onRemove}
@@ -66,7 +71,7 @@ function CommentField({
               onChange(e.target.value)
             }
           }}
-          placeholder={`Comment ${index + 1}...`}
+          placeholder={`${labelPrefix} ${index + 1}...`}
           className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600/30 overflow-hidden resize-none"
           rows={1}
           style={{ minHeight: '44px' }}
@@ -82,7 +87,7 @@ function CommentField({
   )
 }
 
-export function AskRedditVideoForm() {
+export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessages }) {
   const { data: session } = authClient.useSession()
   const { credits, refresh, isLoading } = useCredits()
   const [spending, setSpending] = useState(false)
@@ -360,22 +365,22 @@ export function AskRedditVideoForm() {
         <div className="md:col-span-8 space-y-5 min-w-0">
           {/* Title Field */}
           <div className="space-y-1.5 min-w-0">
-            <label className="text-sm text-zinc-300">Title</label>
+            <label className="text-sm text-zinc-300">{messages?.fields.titleLabel ?? "Title"}</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, MAX_TITLE_LENGTH))}
-              placeholder="Enter post title..."
+              placeholder={messages?.fields.titlePlaceholder ?? "Enter post title..."}
               className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
             />
             <div className="text-right text-xs text-zinc-500">
-              {title.length}/{MAX_TITLE_LENGTH} characters
+              {title.length}/{MAX_TITLE_LENGTH} {messages?.fields.titleCounterSuffix ?? "characters"}
             </div>
           </div>
           
           {/* Comments */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-sm text-zinc-300">Comments</label>
+              <label className="text-sm text-zinc-300">{messages?.fields.commentsLabel ?? "Comments"}</label>
               <span className="text-xs text-zinc-500">
                 {comments.length} of {MAX_COMMENTS} • {totalCommentsLength}/{MAX_TOTAL_COMMENTS_LENGTH} chars
               </span>
@@ -392,6 +397,7 @@ export function AskRedditVideoForm() {
                   maxLength={MAX_COMMENT_LENGTH}
                   maxTotalLength={MAX_TOTAL_COMMENTS_LENGTH}
                   totalLength={totalCommentsLength}
+                  labelPrefix={messages?.fields.commentLabelPrefix ?? "Comment"}
                 />
               ))}
               
@@ -411,7 +417,7 @@ export function AskRedditVideoForm() {
           {/* Language and Voice Selection */}
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm text-zinc-300">Language</label>
+              <label className="text-sm text-zinc-300">{messages?.fields.languageLabel ?? "Language"}</label>
               <select 
                 value={language} 
                 onChange={(e) => setLanguage(e.target.value)}
@@ -432,6 +438,7 @@ export function AskRedditVideoForm() {
               onPreview={playPreview}
               onStopPreview={stopPreview}
               playingVoice={playingVoice}
+              label={messages?.fields.voiceLabel ?? "Voice"}
             />
           </div>
           
@@ -443,6 +450,7 @@ export function AskRedditVideoForm() {
             onPreview={playMusicPreview}
             onStopPreview={stopMusicPreview}
             playingMusic={playingMusic}
+            label={messages?.fields.musicLabel ?? "Background Music (Optional)"}
           />
           
           {/* Background Video Selection */}
@@ -450,6 +458,7 @@ export function AskRedditVideoForm() {
             backgrounds={backgrounds}
             selectedBackground={bgVideo}
             onSelect={setBgVideo}
+            label={messages?.fields.backgroundLabel ?? "Background Video"}
           />
         </div>
         
@@ -481,10 +490,10 @@ export function AskRedditVideoForm() {
             className="bg-white text-zinc-900 hover:bg-zinc-200 w-full px-6 py-3 h-14 text-lg md:text-xl font-semibold rounded-lg shadow-sm hover:shadow-md transition-colors transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/60"
           >
             {spending ? (
-              "Generating..."
+              messages?.generatingLabel ?? "Generating..."
             ) : (
               <span className="inline-flex items-center justify-center gap-3">
-                <span className="tracking-wide">Generate</span>
+                <span className="tracking-wide">{messages?.generateCta ?? "Generate"}</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-black text-yellow-400 px-3 py-1.5 text-base">
                   {requiredCredits} <CircleDollarSign size={18} className="text-yellow-400" />
                 </span>

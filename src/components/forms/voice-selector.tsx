@@ -14,6 +14,7 @@ interface VoiceSelectorProps {
   onPreview: (voice: string) => void
   onStopPreview: () => void
   playingVoice: string | null
+  label?: string
 }
 
 export function VoiceSelector({
@@ -22,7 +23,8 @@ export function VoiceSelector({
   onVoiceSelect,
   onPreview,
   onStopPreview,
-  playingVoice
+  playingVoice,
+  label,
 }: VoiceSelectorProps) {
   const handlePreview = (e: React.MouseEvent, voice: string) => {
     e.stopPropagation()
@@ -31,7 +33,7 @@ export function VoiceSelector({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm text-zinc-300">Voice</label>
+      <label className="text-sm text-zinc-300">{label ?? "Voice"}</label>
       <div className="custom-scrollbar flex gap-2 py-1 overflow-x-auto snap-x snap-mandatory min-w-0">
         {voices.map((v) => (
           <div

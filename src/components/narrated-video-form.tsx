@@ -13,15 +13,24 @@ import { PreviewPanel } from "./forms/preview-panel"
 import { useCredits } from "@/contexts/CreditBalanceContext"
 import { playAudioPreview, stopAudioPreview } from "@/lib/audioPreview"
 import { computeNarrationCredits } from "@/lib/creditCalculation"
+import type { DashboardMessages } from "@/lib/i18n"
+
+type NarrationFormMessages = DashboardMessages["forms"]["narration"]
 
 function ScriptField({
   value,
   onChange,
   maxLength,
+  label,
+  placeholder,
+  counterSuffix,
 }: {
   value: string
   onChange: (v: string) => void
   maxLength: number
+  label: string
+  placeholder: string
+  counterSuffix: string
 }) {
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -34,20 +43,20 @@ function ScriptField({
 
   return (
     <div className="space-y-2 min-w-0">
-      <div className="text-sm font-medium text-white">Your script</div>
+      <div className="text-sm font-medium text-white">{label}</div>
       <textarea
         ref={taRef}
         value={value}
         onChange={(e) => onChange(e.target.value.slice(0, maxLength))}
-        placeholder="Paste text or write your script..."
+        placeholder={placeholder}
         className="w-full max-w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600/30 overflow-hidden resize-none"
       />
-      <div className="text-right text-xs text-zinc-500">{value.trim().length}/{maxLength} chars</div>
+      <div className="text-right text-xs text-zinc-500">{value.trim().length}/{maxLength} {counterSuffix}</div>
     </div>
   )
 }
 
-export function NarratedVideoForm() {
+export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessages }) {
   const { data: session } = authClient.useSession()
   const { credits, refresh: refreshCredits, isLoading } = useCredits()
   const [spending, setSpending] = useState(false)
@@ -200,23 +209,30 @@ export function NarratedVideoForm() {
     <div className="max-w-6xl w-full mx-auto p-0 bg-zinc-900 border border-zinc-800 rounded-xl">
       <div className="grid md:grid-cols-12 gap-6 lg:gap-8 w-full px-4 md:px-6 py-5">
         <div className="md:col-span-8 space-y-5 min-w-0">
-          <ScriptField value={script} onChange={setScript} maxLength={2000} />
+          <ScriptField
+            value={script}
+            onChange={setScript}
+            maxLength={2000}
+            label={messages?.fields.scriptLabel ?? "Your script"}
+            placeholder={messages?.fields.scriptPlaceholder ?? "Paste text or write your script..."}
+            counterSuffix={messages?.fields.scriptCounterSuffix ?? "chars"}
+          />
 
           <div className="space-y-4 min-w-0">
             <div className="space-y-1.5 min-w-0">
-              <label className="text-sm text-zinc-300">Title (optional)</label>
+              <label className="text-sm text-zinc-300">{messages?.fields.titleLabel ?? "Title (optional)"}</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value.slice(0, 100))}
-                placeholder="My awesome video"
+                placeholder={messages?.fields.titlePlaceholder ?? "My awesome video"}
                 className="w-full max-w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
               />
-              <div className="text-right text-xs text-zinc-500">{title.trim().length}/100 chars</div>
+              <div className="text-right text-xs text-zinc-500">{title.trim().length}/100 {messages?.fields.titleCounterSuffix ?? "chars"}</div>
             </div>
             
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-sm text-zinc-300">Language</label>
+                <label className="text-sm text-zinc-300">{messages?.fields.languageLabel ?? "Language"}</label>
                 <select 
                   value={language} 
                   onChange={(e) => setLanguage(e.target.value)}
@@ -237,6 +253,7 @@ export function NarratedVideoForm() {
                 onPreview={playPreview}
                 onStopPreview={stopPreview}
                 playingVoice={playingVoice}
+                label={messages?.fields.voiceLabel ?? "Voice"}
               />
             </div>
             
@@ -247,12 +264,14 @@ export function NarratedVideoForm() {
               onPreview={playMusicPreview}
               onStopPreview={stopMusicPreview}
               playingMusic={playingMusic}
+              label={messages?.fields.musicLabel ?? "Background Music (Optional)"}
             />
             
             <BackgroundSelector
               backgrounds={backgrounds}
               selectedBackground={bgVideo}
               onSelect={setBgVideo}
+              label={messages?.fields.backgroundLabel ?? "Background Video"}
             />
           </div>
         </div>
@@ -271,10 +290,10 @@ export function NarratedVideoForm() {
             spending || (!!jobId && status !== "completed" && status !== "failed") || (session ? credits == null : false) || !script.trim() || !language || !voice || !bgVideo
           } className="bg-white text-zinc-900 hover:bg-zinc-200 w-full px-6 py-3 h-14 text-lg md:text-xl font-semibold rounded-lg shadow-sm hover:shadow-md transition-colors transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/60">
             {spending ? (
-              "Generating..."
+              messages?.generatingLabel ?? "Generating..."
             ) : (
               <span className="inline-flex items-center justify-center gap-3">
-                <span className="tracking-wide">Generate</span>
+                <span className="tracking-wide">{messages?.generateCta ?? "Generate"}</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-black text-yellow-400 px-3 py-1.5 text-base">
                   {requiredCredits} <CircleDollarSign size={18} className="text-yellow-400" />
                 </span>
