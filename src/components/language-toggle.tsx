@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import type { Locale } from "@/lib/i18n"
+import { useLocale } from "@/lib/useLocale"
 
 interface LanguageToggleProps {
   size?: "nav" | "full"
@@ -10,14 +10,7 @@ interface LanguageToggleProps {
 }
 
 export function LanguageToggle({ size = "nav", onBeforeToggle }: LanguageToggleProps) {
-  const [currentLocale, setCurrentLocale] = useState<Locale>("en")
-
-  useEffect(() => {
-    if (typeof document === "undefined") return
-    const match = document.cookie.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-    const lang = (match?.[1] as Locale | undefined) ?? "en"
-    setCurrentLocale(lang)
-  }, [])
+  const currentLocale = useLocale()
 
   const handleToggle = () => {
     onBeforeToggle?.()

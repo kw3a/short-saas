@@ -1,10 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { CircleDollarSign, RefreshCw, ChevronDown } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
+import { useLocale } from "@/lib/useLocale"
 
 type Purchase = { id: string; amountCents: number; status: string; createdAt: string; pkgName: string | null; pkgCredits: number | null }
+type PurchasesPage = { items?: unknown[]; nextCursor?: { cursorCreatedAt: string } | null }
+
+async function fetchPurchases(cursor: string | null): Promise<PurchasesPage> {
+  const params = new URLSearchParams()
+  if (cursor) params.set("cursorCreatedAt", cursor)
+  const res = await fetch(`/api/credits/purchases?${params.toString()}`, { cache: "no-store" })
+  return res.json()
+}
 
 const purchasesTexts: Record<Locale, {
   title: string
@@ -32,44 +41,38 @@ const purchasesTexts: Record<Locale, {
   },
 }
 
-function getInitialLocale(): Locale {
-  if (typeof document === "undefined") return "en"
-  const match = document.cookie.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-  return (match?.[1] as Locale | undefined) ?? "en"
-}
-
 export default function DashboardPurchasesPage() {
   const [items, setItems] = useState<Purchase[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [locale, setLocale] = useState<Locale>(getInitialLocale)
+  // Start loading so the initial mount fetch needs no synchronous setState.
+  const [loading, setLoading] = useState(true)
+  const locale = useLocale()
 
-  async function load(reset = false) {
+  const applyPage = useCallback((json: PurchasesPage, reset: boolean) => {
+    const newItems = (json.items ?? []) as Purchase[]
+    setItems(prev => reset ? newItems : [...prev, ...newItems])
+    setCursor(json.nextCursor?.cursorCreatedAt ?? null)
+    setHasMore(Boolean(json.nextCursor))
+  }, [])
+
+  const load = useCallback(async (reset = false) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (!reset && cursor) params.set("cursorCreatedAt", cursor)
-      const res = await fetch(`/api/credits/purchases?${params.toString()}`, { cache: "no-store" })
-      const json = await res.json()
-      const newItems: Purchase[] = json.items || []
-      setItems(prev => reset ? newItems : [...prev, ...newItems])
-      setCursor(json.nextCursor?.cursorCreatedAt ?? null)
-      setHasMore(Boolean(json.nextCursor))
+      applyPage(await fetchPurchases(reset ? null : cursor), reset)
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyPage, cursor])
 
-  useEffect(() => { load(true) }, [])
-
+  // Initial load on mount: set state only inside async callbacks.
   useEffect(() => {
-    const id = setInterval(() => {
-      const next = getInitialLocale()
-      setLocale((prev) => (prev === next ? prev : next))
-    }, 3000)
-    return () => clearInterval(id)
-  }, [])
+    let cancelled = false
+    fetchPurchases(null)
+      .then(json => { if (!cancelled) applyPage(json, true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [applyPage])
 
   const t = purchasesTexts[locale] ?? purchasesTexts.en
 

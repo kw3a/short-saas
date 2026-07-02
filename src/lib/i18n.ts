@@ -7,6 +7,25 @@ export function detectLocale(acceptLanguage: string | null | undefined): Locale 
   return "en"
 }
 
+/**
+ * Resolve the active locale from the request: prefer the `lang` cookie,
+ * fall back to the Accept-Language header. Safe to call from any Server
+ * Component / route handler.
+ */
+export async function resolveRequestLocale(): Promise<Locale> {
+  const { headers } = await import("next/headers")
+  const h = await headers()
+  const cookieHeader = h.get("cookie") ?? ""
+  if (cookieHeader) {
+    const match = cookieHeader.match(/(?:^|; )lang=(en|es)(?:;|$)/)
+    const cookieLang = match?.[1] as Locale | undefined
+    if (cookieLang && supportedLocales.includes(cookieLang)) {
+      return cookieLang
+    }
+  }
+  return detectLocale(h.get("accept-language") ?? null)
+}
+
 export type LandingMessages = {
   metadata: {
     title: string

@@ -1,7 +1,13 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+
+async function fetchTotalCredits(): Promise<number> {
+  const res = await fetch('/api/credits/me', { cache: 'no-store' });
+  const json = await res.json();
+  return Number(json.totalCredits || 0);
+}
 
 type CreditBalanceContextType = {
   credits: number | null;
@@ -16,33 +22,37 @@ const CreditBalanceContext = createContext<CreditBalanceContextType>({
 });
 
 export function CreditBalanceProvider({ children }: { children: React.ReactNode }) {
-  const [credits, setCredits] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [fetchedCredits, setFetchedCredits] = useState<number | null>(null);
   const { data: session } = authClient.useSession();
 
-  const fetchCredits = async () => {
-    if (!session) {
-      setCredits(null);
-      setIsLoading(false);
-      return;
-    }
-
+  const fetchCredits = useCallback(async () => {
+    if (!session) return;
     try {
-      setIsLoading(true);
-      const res = await fetch('/api/credits/me', { cache: 'no-store' });
-      const json = await res.json();
-      setCredits(Number(json.totalCredits || 0));
+      setFetchedCredits(await fetchTotalCredits());
     } catch (error) {
       console.error('Failed to fetch credits:', error);
-      setCredits(0);
-    } finally {
-      setIsLoading(false);
+      setFetchedCredits(0);
     }
-  };
-
-  useEffect(() => {
-    fetchCredits();
   }, [session]);
+
+  // Fetch on session change, setting state only inside async callbacks.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    fetchTotalCredits()
+      .then((c) => { if (!cancelled) setFetchedCredits(c); })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Failed to fetch credits:', error);
+        setFetchedCredits(0);
+      });
+    return () => { cancelled = true; };
+  }, [session]);
+
+  // Derive instead of syncing state in the effect: logged out -> no credits,
+  // session resolving -> loading, logged in -> loading until first fetch lands.
+  const credits = session ? fetchedCredits : null;
+  const isLoading = session === undefined ? true : session ? fetchedCredits === null : false;
 
   return (
     <CreditBalanceContext.Provider

@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { headers } from "next/headers"
 import { NavBar } from "@/components/navbar"
 import { PricingPlans } from "@/components/pricing-plans"
 import { getActivePricingPlans } from "@/lib/pricing"
@@ -8,37 +7,98 @@ import { Features } from "@/components/features"
 import { FAQ } from "@/components/faq"
 import { Products } from "@/components/products"
 import { Footer } from "@/components/footer"
-import { detectLocale, getLandingMessages, supportedLocales, type Locale } from "@/lib/i18n"
-
-async function resolveLocale(): Promise<Locale> {
-  const h = await headers()
-  const cookieHeader = h.get("cookie") ?? ""
-  if (cookieHeader) {
-    const match = cookieHeader.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-    const cookieLang = match?.[1] as Locale | undefined
-    if (cookieLang && supportedLocales.includes(cookieLang)) {
-      return cookieLang
-    }
-  }
-  return detectLocale(h.get("accept-language") ?? null)
-}
+import { getLandingMessages, resolveRequestLocale } from "@/lib/i18n"
+import { siteConfig, siteUrl, ogLocale } from "@/lib/site"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const locale = await resolveLocale()
+  const locale = await resolveRequestLocale()
   const messages = getLandingMessages(locale)
   return {
     title: messages.metadata.title,
     description: messages.metadata.description,
+    alternates: {
+      canonical: "/",
+      languages: {
+        en: "/",
+        es: "/",
+        "x-default": "/",
+      },
+    },
+    openGraph: {
+      type: "website",
+      siteName: siteConfig.name,
+      title: messages.metadata.title,
+      description: messages.metadata.description,
+      url: siteUrl,
+      locale: ogLocale[locale],
+      alternateLocale: locale === "en" ? ["es_ES"] : ["en_US"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: messages.metadata.title,
+      description: messages.metadata.description,
+    },
   }
 }
 
 export default async function Home() {
   const pricingPlans = getActivePricingPlans()
-  const locale = await resolveLocale()
+  const locale = await resolveRequestLocale()
   const messages = getLandingMessages(locale)
-  
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: siteConfig.name,
+        url: siteUrl,
+        logo: `${siteUrl}/icon.png`,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: siteConfig.name,
+        description: messages.metadata.description,
+        publisher: { "@id": `${siteUrl}/#organization` },
+        inLanguage: locale,
+      },
+      {
+        "@type": "WebApplication",
+        name: siteConfig.name,
+        url: siteUrl,
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Web",
+        description: messages.metadata.description,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+          description: "Free to start with 1000 credits on sign up",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: messages.faq.items.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer,
+          },
+        })),
+      },
+    ],
+  }
+
   return (
     <div className="bg-zinc-950 text-white flex flex-col min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="flex-1">
         <NavBar labels={messages.navbar} />
         <Hero messages={messages.hero} />

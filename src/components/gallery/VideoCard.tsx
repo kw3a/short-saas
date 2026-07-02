@@ -8,14 +8,25 @@ import { getBackgroundLabel, getMusicLabel, getVoiceLabel } from "@/config/optio
 type Props = {
   id: string
   status: "completed" | "rendering" | "queued" | "failed"
+  progress: number
   thumbUrl: string | null
   type: string
   creditCost: number | null
   createdAt: string
 }
 
-export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCost, createdAt }: Props) {
+// Thumbnails are presigned, short-lived R2 URLs, so they must not be routed
+// through next/image's optimizer (expiring signatures, unconfigured host).
+function Thumb({ src, onError }: { src: string; onError: () => void }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- see note above
+    <img src={src} alt="thumbnail" loading="lazy" onError={onError} className="h-full w-full object-cover" />
+  )
+}
+
+export function VideoCard({ id, status: initialStatus, progress: initialProgress, thumbUrl, type, creditCost, createdAt }: Props) {
   const [status, setStatus] = useState(initialStatus)
+  const [progress, setProgress] = useState(initialProgress)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -52,7 +63,8 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
     const yr = Math.round(mo / 12)
     return rtf.format(-yr, "year")
   }
-  const dateLabel = formatRelativeDate(createdAt)
+  // Lazy init: read the current time once instead of impurely on every render.
+  const [dateLabel] = useState(() => formatRelativeDate(createdAt))
 
   async function loadVideo() {
     if (status !== "completed" || videoUrl || loadingVideo) return
@@ -61,6 +73,7 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
       const res = await fetch(`/api/video/status?id=${id}`)
       const data = await res.json()
       setStatus(data.status)
+      if (typeof data.progress === "number") setProgress(data.progress)
       if (data.status === "completed" && data.videoUrl) setVideoUrl(data.videoUrl)
     } finally {
       setLoadingVideo(false)
@@ -88,6 +101,7 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
       const res = await fetch(`/api/video/status?id=${id}`)
       const data = await res.json()
       setStatus(data.status)
+      if (typeof data.progress === "number") setProgress(data.progress)
       if (data.status === "completed" && data.videoUrl) setVideoUrl(data.videoUrl)
     } finally {
       setRefreshing(false)
@@ -103,7 +117,7 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
           ) : (
             <button onClick={loadVideo} className="relative h-full w-full">
               {thumbUrl && !thumbFailed ? (
-                <img src={thumbUrl} alt="thumbnail" loading="lazy" onError={() => setThumbFailed(true)} className="h-full w-full object-cover" />
+                <Thumb src={thumbUrl} onError={() => setThumbFailed(true)} />
               ) : (
                 <div className="h-full w-full flex items-center justify-center bg-zinc-900 text-zinc-500">
                   <ImageOff size={24} />
@@ -172,12 +186,21 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
       <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
         <div className="aspect-[9/16] w-full relative">
           {thumbUrl && !thumbFailed ? (
-            <img src={thumbUrl} alt="thumbnail" loading="lazy" onError={() => setThumbFailed(true)} className="h-full w-full object-cover" />
+            <Thumb src={thumbUrl} onError={() => setThumbFailed(true)} />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-zinc-900 text-zinc-500"><ImageOff size={24} /></div>
           )}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-zinc-900/70 text-white px-3 py-1 rounded capitalize">{status}</div>
+            <div className="bg-zinc-900/70 text-white px-3 py-2 rounded flex flex-col items-center gap-1.5 min-w-[7rem]">
+              <span className="capitalize">{status}</span>
+              <div className="h-1 w-full rounded-full bg-white/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-white transition-[width] duration-500 ease-out"
+                  style={{ width: `${Math.max(0, Math.min(100, Math.round(progress)))}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-zinc-300">{Math.max(0, Math.min(100, Math.round(progress)))}%</span>
+            </div>
           </div>
         </div>
         <div className="px-2 pt-2 flex justify-between items-center">
@@ -226,7 +249,7 @@ export function VideoCard({ id, status: initialStatus, thumbUrl, type, creditCos
     <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
       <div className="aspect-[9/16] w-full relative">
         {thumbUrl && !thumbFailed ? (
-          <img src={thumbUrl} alt="thumbnail" loading="lazy" onError={() => setThumbFailed(true)} className="h-full w-full object-cover" />
+          <Thumb src={thumbUrl} onError={() => setThumbFailed(true)} />
         ) : (
           <div className="h-full w-full flex items-center justify-center bg-zinc-900 text-zinc-500"><ImageOff size={24} /></div>
         )}

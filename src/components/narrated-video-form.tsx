@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useMemo } from "react"
+import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
 import { LoginModal } from "./login-modal"
@@ -65,6 +65,7 @@ export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessag
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   // Initialize with default values
   const defaultLanguage = languages[0]?.value || ""
@@ -92,37 +93,32 @@ export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessag
     [language]
   )
   
-  const voiceOptions = useMemo(() => 
-    selectedLang?.voices || [], 
+  const voiceOptions = useMemo(() =>
+    selectedLang?.voices || [],
     [selectedLang]
   )
 
-  // Update voice when language changes to ensure a valid voice is always selected
-  useEffect(() => {
-    if (selectedLang?.voices?.length && !selectedLang.voices.some(v => v.value === voice)) {
-      setVoice(selectedLang.voices[0].value)
-    }
-  }, [selectedLang, voice])
+  // Keep the selected voice valid for the current language. Adjusting state
+  // during render (React's recommended pattern) avoids a setState-in-effect.
+  if (voiceOptions.length > 0 && !voiceOptions.some((v) => v.value === voice)) {
+    setVoice(voiceOptions[0].value)
+  }
 
   function playPreview(v: string) { playAudioPreview(audioRef, playingVoice, setPlayingVoice, "/voices", v) }
-  function stopPreview() { stopAudioPreview(audioRef, setPlayingVoice) }
+  const stopPreview = useCallback(() => { stopAudioPreview(audioRef, setPlayingVoice) }, [])
 
   function playMusicPreview(v: string) { playAudioPreview(musicAudioRef, playingMusic, setPlayingMusic, "/bg-music", v) }
-  function stopMusicPreview() { stopAudioPreview(musicAudioRef, setPlayingMusic) }
+  const stopMusicPreview = useCallback(() => { stopAudioPreview(musicAudioRef, setPlayingMusic) }, [])
 
+  // Stop any voice preview when the language changes
   useEffect(() => {
-    const belongs = voiceOptions.some((v) => v.value === voice)
-    if (!belongs && voiceOptions.length > 0) {
-      setVoice(voiceOptions[0].value)
-    }
-    // stop any preview when language changes
     stopPreview()
-  }, [language])
+  }, [language, stopPreview])
 
   // Stop music preview when selection changes
   useEffect(() => {
     stopMusicPreview()
-  }, [music])
+  }, [music, stopMusicPreview])
 
   // Check credits on mount and when session changes
   useEffect(() => {
@@ -144,6 +140,7 @@ export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessag
         if (cancel) return
         const fetchedStatus = data.status ?? "pending"
         setStatus(fetchedStatus)
+        setProgress(typeof data.progress === "number" ? data.progress : 0)
         if (fetchedStatus === "completed" && data.videoUrl) {
           setVideoUrl(data.videoUrl as string)
           return
@@ -165,6 +162,7 @@ export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessag
     setPreviewError(null)
     setVideoUrl(null)
     setStatus(null)
+    setProgress(0)
     if (!session) { setLoginModalOpen(true); return }
     if ((credits ?? 0) < requiredCredits) { setPreviewError("Not enough credits"); setStatus('failed'); setSpending(false); return }
     if (!script.trim()) { setPreviewError("Script is required"); setStatus('failed'); return }
@@ -278,6 +276,7 @@ export function NarratedVideoForm({ messages }: { messages?: NarrationFormMessag
         
         <PreviewPanel
           status={status}
+          progress={progress}
           videoUrl={videoUrl}
           previewError={previewError}
           jobId={jobId}

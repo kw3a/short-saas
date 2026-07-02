@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       )
     : base
 
-  const rows = await db.select({ id: video.id, status: video.status, createdAt: video.createdAt, type: video.type, creditCost: video.creditCost })
+  const rows = await db.select({ id: video.id, status: video.status, progress: video.progress, createdAt: video.createdAt, type: video.type, creditCost: video.creditCost })
     .from(video)
     .where(where as any)
     .orderBy(desc(video.createdAt))
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
   const result = await Promise.all(items.map(async (r) => {
     const thumbUrl = await getSignedThumbUrl(r.id, { expiresIn: 3600, requireExists: false })
-    return { id: r.id, status: r.status, createdAt: r.createdAt, type: r.type, creditCost: r.creditCost, thumbUrl }
+    return { id: r.id, status: r.status, progress: r.progress, createdAt: r.createdAt, type: r.type, creditCost: r.creditCost, thumbUrl }
   }))
 
   return NextResponse.json({ items: result, nextCursor })

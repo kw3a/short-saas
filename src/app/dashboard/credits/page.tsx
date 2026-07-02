@@ -1,11 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { CircleDollarSign, RefreshCw, ChevronDown } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
+import { useLocale } from "@/lib/useLocale"
 
 type Spend = { id: string; status: string; creditCost: number | null; createdAt: string }
 type Adjustment = { id: string; amount: number; type: string; reason: string | null; createdAt: string }
+type HistoryPage = { items?: unknown[]; nextCursor?: { cursorCreatedAt: string } | null }
+
+async function fetchCreditHistory(type: "spends" | "adjustments", cursor: string | null): Promise<HistoryPage> {
+  const params = new URLSearchParams({ type, limit: "20" })
+  if (cursor) params.set("cursorCreatedAt", cursor)
+  const res = await fetch(`/api/credits/history?${params.toString()}`, { cache: "no-store" })
+  return res.json()
+}
 
 const creditsTexts: Record<Locale, {
   title: string
@@ -63,71 +72,64 @@ const creditsTexts: Record<Locale, {
   },
 }
 
-function getInitialLocale(): Locale {
-  if (typeof document === "undefined") return "en"
-  const match = document.cookie.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-  return (match?.[1] as Locale | undefined) ?? "en"
-}
-
 export default function DashboardCreditsPage() {
   const [spends, setSpends] = useState<Spend[]>([])
   const [spendsCursor, setSpendsCursor] = useState<string | null>(null)
   const [spendsHasMore, setSpendsHasMore] = useState(false)
-  const [spendsLoading, setSpendsLoading] = useState(false)
+  // Start loading so the initial mount fetch needs no synchronous setState.
+  const [spendsLoading, setSpendsLoading] = useState(true)
 
   const [adjustments, setAdjustments] = useState<Adjustment[]>([])
   const [adjCursor, setAdjCursor] = useState<string | null>(null)
   const [adjHasMore, setAdjHasMore] = useState(false)
-  const [adjLoading, setAdjLoading] = useState(false)
+  const [adjLoading, setAdjLoading] = useState(true)
 
   const [tab, setTab] = useState<"spends" | "adjustments">("spends")
-  const [locale, setLocale] = useState<Locale>(getInitialLocale)
+  const locale = useLocale()
 
-  async function loadSpends(reset = false) {
+  const applySpends = useCallback((json: HistoryPage, reset: boolean) => {
+    const items = (json.items ?? []) as Spend[]
+    setSpends(prev => reset ? items : [...prev, ...items])
+    setSpendsCursor(json.nextCursor?.cursorCreatedAt ?? null)
+    setSpendsHasMore(Boolean(json.nextCursor))
+  }, [])
+
+  const applyAdjustments = useCallback((json: HistoryPage, reset: boolean) => {
+    const items = (json.items ?? []) as Adjustment[]
+    setAdjustments(prev => reset ? items : [...prev, ...items])
+    setAdjCursor(json.nextCursor?.cursorCreatedAt ?? null)
+    setAdjHasMore(Boolean(json.nextCursor))
+  }, [])
+
+  const loadSpends = useCallback(async (reset = false) => {
     setSpendsLoading(true)
     try {
-      const params = new URLSearchParams({ type: "spends", limit: "20" })
-      if (!reset && spendsCursor) params.set("cursorCreatedAt", spendsCursor)
-      const res = await fetch(`/api/credits/history?${params.toString()}`, { cache: "no-store" })
-      const json = await res.json()
-      const items: Spend[] = json.items || []
-      setSpends(prev => reset ? items : [...prev, ...items])
-      setSpendsCursor(json.nextCursor?.cursorCreatedAt ?? null)
-      setSpendsHasMore(Boolean(json.nextCursor))
+      applySpends(await fetchCreditHistory("spends", reset ? null : spendsCursor), reset)
     } finally {
       setSpendsLoading(false)
     }
-  }
+  }, [applySpends, spendsCursor])
 
-  async function loadAdjustments(reset = false) {
+  const loadAdjustments = useCallback(async (reset = false) => {
     setAdjLoading(true)
     try {
-      const params = new URLSearchParams({ type: "adjustments", limit: "20" })
-      if (!reset && adjCursor) params.set("cursorCreatedAt", adjCursor)
-      const res = await fetch(`/api/credits/history?${params.toString()}`, { cache: "no-store" })
-      const json = await res.json()
-      const items: Adjustment[] = json.items || []
-      setAdjustments(prev => reset ? items : [...prev, ...items])
-      setAdjCursor(json.nextCursor?.cursorCreatedAt ?? null)
-      setAdjHasMore(Boolean(json.nextCursor))
+      applyAdjustments(await fetchCreditHistory("adjustments", reset ? null : adjCursor), reset)
     } finally {
       setAdjLoading(false)
     }
-  }
+  }, [applyAdjustments, adjCursor])
 
+  // Initial loads on mount: set state only inside async callbacks.
   useEffect(() => {
-    // initial loads
-    loadSpends(true)
-    loadAdjustments(true)
-  }, [])
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const next = getInitialLocale()
-      setLocale((prev) => (prev === next ? prev : next))
-    }, 3000)
-    return () => clearInterval(id)
-  }, [])
+    let cancelled = false
+    fetchCreditHistory("spends", null)
+      .then(json => { if (!cancelled) applySpends(json, true) })
+      .finally(() => { if (!cancelled) setSpendsLoading(false) })
+    fetchCreditHistory("adjustments", null)
+      .then(json => { if (!cancelled) applyAdjustments(json, true) })
+      .finally(() => { if (!cancelled) setAdjLoading(false) })
+    return () => { cancelled = true }
+  }, [applySpends, applyAdjustments])
 
   const t = creditsTexts[locale] ?? creditsTexts.en
 

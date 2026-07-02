@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm"
 export async function processOrderRefunded(payload: WebhookOrderRefundedPayload) {
   const data = payload.data
   const externalUserId = data.customer.externalId
-  const productId = data.product.id
+  const productId = data.product?.id
   const checkoutId = data.id
 
   if (!externalUserId || !productId) {

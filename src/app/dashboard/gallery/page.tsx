@@ -1,8 +1,8 @@
 "use client"
 import GalleryList from "@/components/gallery/GalleryList"
 import { RefreshCcw } from "lucide-react"
-import { useEffect, useState } from "react"
 import type { Locale } from "@/lib/i18n"
+import { useLocale } from "@/lib/useLocale"
 
 const galleryTexts: Record<Locale, { title: string; subtitle: string; refreshAria: string }> = {
   en: {
@@ -17,24 +17,8 @@ const galleryTexts: Record<Locale, { title: string; subtitle: string; refreshAri
   },
 }
 
-function getInitialLocale(): Locale {
-  if (typeof document === "undefined") return "en"
-  const match = document.cookie.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-  return (match?.[1] as Locale | undefined) ?? "en"
-}
-
 export default function DashboardGalleryPage() {
-  const [locale, setLocale] = useState<Locale>(getInitialLocale)
-
-  useEffect(() => {
-    // Keep locale in sync if cookie changes via navbar toggle
-    const id = setInterval(() => {
-      const next = getInitialLocale()
-      setLocale((prev) => (prev === next ? prev : next))
-    }, 3000)
-    return () => clearInterval(id)
-  }, [])
-
+  const locale = useLocale()
   const t = galleryTexts[locale] ?? galleryTexts.en
   return (
     <div>

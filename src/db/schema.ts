@@ -89,6 +89,9 @@ export const video = pgTable("video", {
   status: text("status", {
     enum: ["queued", "rendering", "completed", "failed"],
   }).notNull().default("queued"),
+  // Render progress 0-100, written by go-video (internal/store.SetProgress) as
+  // it works through TTS/subtitle-rendering/ffmpeg-encode/upload stages.
+  progress: integer("progress").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

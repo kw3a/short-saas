@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <p>
             viralshort is a product made by Aldair Torrez (“we”, “us”, or “our”). We know you care about how your personal
             information is used and shared, and we take your privacy seriously. Please read the following to learn more about our
-            Privacy Policy. By using or accessing the Services ("viralshort") in any manner, you acknowledge that you accept the
+            Privacy Policy. By using or accessing the Services (&ldquo;viralshort&rdquo;) in any manner, you acknowledge that you accept the
             practices and policies outlined in this Privacy Policy, and you hereby consent that we will collect, use, and share your
             information in the following ways.
           </p>
@@ -28,12 +28,12 @@ export default function PrivacyPage() {
           </p>
 
           <p>
-            You can sign up with your Google account so your viralshort account email will be prefilled with your Google account's
+            You can sign up with your Google account so your viralshort account email will be prefilled with your Google account&apos;s
             email.
           </p>
 
           <p>
-            We don't share any personally identifying information publicly or with third parties, except when required to by law.
+            We don&apos;t share any personally identifying information publicly or with third parties, except when required to by law.
           </p>
 
           <p>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             <strong>Sharing: </strong> We do not share Google user data with any third parties, except when required by law. We ensure that all data usage is limited to the practices explicitly disclosed in this privacy policy.
           </p>
           <p>
-            <strong>Compliance: </strong> viralshort's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+            <strong>Compliance: </strong> viralshort&apos;s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
           </p>
 
           <p>

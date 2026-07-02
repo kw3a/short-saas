@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useMemo } from "react"
+import { useCallback, useEffect, useRef, useState, useMemo } from "react"
 import { Plus, X } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { Button } from "@/components/ui/button"
@@ -96,6 +96,7 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   
   // Initialize with default values immediately
@@ -123,11 +124,17 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
     [language]
   )
   
-  const voiceOptions = useMemo(() => 
-    selectedLang?.voices || [], 
+  const voiceOptions = useMemo(() =>
+    selectedLang?.voices || [],
     [selectedLang]
   )
-  
+
+  // Keep the selected voice valid for the current language. Adjusting state
+  // during render (React's recommended pattern) avoids a setState-in-effect.
+  if (voiceOptions.length > 0 && !voiceOptions.some((v) => v.value === voice)) {
+    setVoice(voiceOptions[0].value)
+  }
+
   // Character limits
   const MAX_TITLE_LENGTH = 100
   const MAX_COMMENT_LENGTH = 1000
@@ -145,41 +152,31 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
     return computeAskRedditCredits(title.trim(), trimmed)
   }, [title, comments])
   
-  // Update voice when language changes to ensure a valid voice is always selected
-  useEffect(() => {
-    if (selectedLang?.voices?.length && !selectedLang.voices.some(v => v.value === voice)) {
-      setVoice(selectedLang.voices[0].value)
-    }
-  }, [selectedLang, voice])
-  
   // Handle voice preview (shared helper)
   function playPreview(v: string) {
     playAudioPreview(audioRef, playingVoice, setPlayingVoice, "/voices", v)
   }
-  function stopPreview() {
+  const stopPreview = useCallback(() => {
     stopAudioPreview(audioRef, setPlayingVoice)
-  }
-  
+  }, [])
+
   // Handle music preview (shared helper)
   function playMusicPreview(v: string) {
     playAudioPreview(musicAudioRef, playingMusic, setPlayingMusic, "/bg-music", v)
   }
-  function stopMusicPreview() {
+  const stopMusicPreview = useCallback(() => {
     stopAudioPreview(musicAudioRef, setPlayingMusic)
-  }
-  
-  // Update voice when language changes
+  }, [])
+
+  // Stop any voice preview when the language changes
   useEffect(() => {
-    if (voiceOptions.length > 0 && !voiceOptions.some((v) => v.value === voice)) {
-      setVoice(voiceOptions[0].value)
-    }
     stopPreview()
-  }, [language, voiceOptions, voice])
-  
+  }, [language, stopPreview])
+
   // Stop music preview when selection changes
   useEffect(() => {
     stopMusicPreview()
-  }, [music])
+  }, [music, stopMusicPreview])
   
   // Check credits on mount and when session changes
   useEffect(() => {
@@ -203,7 +200,8 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
         
         const fetchedStatus = data.status ?? "pending"
         setStatus(fetchedStatus)
-        
+        setProgress(typeof data.progress === "number" ? data.progress : 0)
+
         if (fetchedStatus === "completed" && data.videoUrl) {
           setVideoUrl(data.videoUrl as string)
           return
@@ -231,7 +229,8 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
     setError(null)
     setPreviewError(null)
     setVideoUrl(null)
-    
+    setProgress(0)
+
     // Validate form
     if (!session) {
       setLoginModalOpen(true)
@@ -465,6 +464,7 @@ export function AskRedditVideoForm({ messages }: { messages?: AskRedditFormMessa
         {/* Preview Panel */}
         <PreviewPanel
           status={status}
+          progress={progress}
           videoUrl={videoUrl}
           previewError={previewError}
           jobId={jobId}

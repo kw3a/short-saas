@@ -1,77 +1,104 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { VideoCard } from "./VideoCard"
 
-type Item = { id: string; status: "completed"|"rendering"|"queued"|"failed"; createdAt: string; type: string; creditCost: number|null; thumbUrl: string|null }
+type Item = { id: string; status: "completed"|"rendering"|"queued"|"failed"; progress: number; createdAt: string; type: string; creditCost: number|null; thumbUrl: string|null }
 
-type Page = { items: Item[]; nextCursor: { cursorCreatedAt: string; cursorId: string } | null }
+type Cursor = { cursorCreatedAt: string; cursorId: string }
+type Page = { items: Item[]; nextCursor: Cursor | null }
+
+async function fetchGalleryPage(cursor?: Cursor | null): Promise<Page> {
+  const qs = new URLSearchParams()
+  if (cursor) {
+    qs.set("cursorCreatedAt", cursor.cursorCreatedAt)
+    qs.set("cursorId", cursor.cursorId)
+  }
+  const res = await fetch(`/api/video/gallery?${qs.toString()}`)
+  if (!res.ok) throw new Error("failed")
+  return res.json()
+}
 
 export default function GalleryList() {
   const { data: session } = authClient.useSession()
   const [items, setItems] = useState<Item[]>([])
-  const [loading, setLoading] = useState(false)
+  // Start in the loading state so the initial mount fetch doesn't need a
+  // synchronous setState inside the effect (which the rules of hooks forbid).
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string|null>(null)
-  const [nextCursor, setNextCursor] = useState<{ cursorCreatedAt: string; cursorId: string } | null>(null)
+  const [nextCursor, setNextCursor] = useState<Cursor | null>(null)
   const [initialLoaded, setInitialLoaded] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const loadingRef = useRef(false)
 
-  async function loadPage(cursor?: { cursorCreatedAt: string; cursorId: string } | null) {
-    setLoading(true)
+  const applyPage = useCallback((data: Page) => {
+    setItems((prev) => {
+      const map = new Map<string, Item>()
+      for (const it of prev) map.set(it.id, it)
+      for (const it of data.items) if (!map.has(it.id)) map.set(it.id, it)
+      return Array.from(map.values())
+    })
+    setNextCursor(data.nextCursor ?? null)
     setError(null)
+  }, [])
+
+  const loadPage = useCallback(async (cursor?: Cursor | null) => {
+    if (loadingRef.current) return
+    loadingRef.current = true
+    setLoading(true)
     try {
-      const qs = new URLSearchParams()
-      if (cursor) {
-        qs.set("cursorCreatedAt", cursor.cursorCreatedAt)
-        qs.set("cursorId", cursor.cursorId)
-      }
-      const res = await fetch(`/api/video/gallery?${qs.toString()}`)
-      if (!res.ok) throw new Error("failed")
-      const data: Page = await res.json()
-      setItems((prev) => {
-        const map = new Map<string, Item>()
-        for (const it of prev) map.set(it.id, it)
-        for (const it of data.items) if (!map.has(it.id)) map.set(it.id, it)
-        return Array.from(map.values())
-      })
-      setNextCursor(data.nextCursor ?? null)
+      applyPage(await fetchGalleryPage(cursor))
     } catch {
       setError("Failed to load gallery")
     } finally {
+      loadingRef.current = false
       setLoading(false)
       setInitialLoaded(true)
     }
-  }
+  }, [applyPage])
 
-  async function refreshAll() {
-    if (loading) return
+  const refreshAll = useCallback(async () => {
+    if (loadingRef.current) return
     setItems([])
     setNextCursor(null)
     setError(null)
     setInitialLoaded(false)
     await loadPage(null)
-  }
+  }, [loadPage])
 
+  // Initial load on mount: keep every setState inside async callbacks so the
+  // effect body never calls setState synchronously.
   useEffect(() => {
-    if (!session?.user?.id) return
-    if (initialLoaded) return
-    loadPage(null)
-  }, [session?.user?.id])
+    if (!session?.user?.id || initialLoaded) return
+    let cancelled = false
+    loadingRef.current = true
+    fetchGalleryPage(null)
+      .then((data) => { if (!cancelled) applyPage(data) })
+      .catch(() => { if (!cancelled) setError("Failed to load gallery") })
+      .finally(() => {
+        if (cancelled) return
+        loadingRef.current = false
+        setLoading(false)
+        setInitialLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [session?.user?.id, initialLoaded, applyPage])
 
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const io = new IntersectionObserver((entries) => {
       const first = entries[0]
-      if (first.isIntersecting && !loading && nextCursor) {
+      if (first.isIntersecting && !loadingRef.current && nextCursor) {
+        setLoading(true)
         loadPage(nextCursor)
       }
     })
     io.observe(el)
     return () => io.disconnect()
-  }, [nextCursor, loading])
+  }, [nextCursor, loadPage])
 
   // Listen for external refresh requests from the page header
   useEffect(() => {
@@ -80,14 +107,14 @@ export default function GalleryList() {
     }
     window.addEventListener('gallery:refresh', onExternalRefresh)
     return () => window.removeEventListener('gallery:refresh', onExternalRefresh)
-  }, [loading])
+  }, [refreshAll])
 
   if (!session?.user?.id) {
     return <div className="text-center text-sm text-zinc-400">Please sign in to view your gallery.</div>
   }
 
   if (initialLoaded && items.length === 0) {
-    return <div className="text-center text-sm text-zinc-400">You don't have any videos yet.</div>
+    return <div className="text-center text-sm text-zinc-400">You don&apos;t have any videos yet.</div>
   }
 
   return (
@@ -99,6 +126,7 @@ export default function GalleryList() {
               key={it.id}
               id={it.id}
               status={it.status}
+              progress={it.progress}
               thumbUrl={it.thumbUrl}
               type={it.type}
               creditCost={it.creditCost}

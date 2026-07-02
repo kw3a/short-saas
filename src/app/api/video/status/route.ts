@@ -15,19 +15,20 @@ export async function GET(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 })
 
   try {
-    const h = await db.select({ status: video.status }).from(video).where(eq(video.id, id)).limit(1)
+    const h = await db.select({ status: video.status, progress: video.progress }).from(video).where(eq(video.id, id)).limit(1)
     const status = h[0]?.status || "missing"
+    const progress = status === "completed" ? 100 : (h[0]?.progress ?? 0)
     if (status === "completed") {
       try {
         const signedUrl = await getSignedVideoUrl(id, { expiresIn: 3600 })
-        if (!signedUrl) return NextResponse.json({ id, status, videoUrl: null }, { status: 200 })
-        return NextResponse.json({ id, status, videoUrl: signedUrl }, { status: 200 })
+        if (!signedUrl) return NextResponse.json({ id, status, progress, videoUrl: null }, { status: 200 })
+        return NextResponse.json({ id, status, progress, videoUrl: signedUrl }, { status: 200 })
       } catch (e) {
-        return NextResponse.json({ id, status }, { status: 200 })
+        return NextResponse.json({ id, status, progress }, { status: 200 })
       }
     }
-    return NextResponse.json({ id, status }, { status: 200 })
+    return NextResponse.json({ id, status, progress }, { status: 200 })
   } catch (e) {
-    return NextResponse.json({ id, status: "missing" }, { status: 200 })
+    return NextResponse.json({ id, status: "missing", progress: 0 }, { status: 200 })
   }
 }

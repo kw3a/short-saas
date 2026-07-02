@@ -1,24 +1,16 @@
+import type { Metadata } from "next"
 import { CreditBalanceProvider } from "@/contexts/CreditBalanceContext"
 import Sidebar from "@/components/dashboard/Sidebar"
 import MobileTopBar from "@/components/dashboard/MobileTopBar"
-import { headers } from "next/headers"
-import { detectLocale, supportedLocales, type Locale, getDashboardMessages } from "@/lib/i18n"
+import { getDashboardMessages, resolveRequestLocale } from "@/lib/i18n"
 
-async function resolveLocale(): Promise<Locale> {
-  const h = await headers()
-  const cookieHeader = h.get("cookie") ?? ""
-  if (cookieHeader) {
-    const match = cookieHeader.match(/(?:^|; )lang=(en|es)(?:;|$)/)
-    const cookieLang = match?.[1] as Locale | undefined
-    if (cookieLang && supportedLocales.includes(cookieLang)) {
-      return cookieLang
-    }
-  }
-  return detectLocale(h.get("accept-language") ?? null)
+// Private, auth-gated area — keep it out of search engines.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const locale = await resolveLocale()
+  const locale = await resolveRequestLocale()
   const messages = getDashboardMessages(locale)
   return (
     <CreditBalanceProvider>
