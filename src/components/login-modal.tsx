@@ -18,7 +18,7 @@ export function LoginModal({ open, onOpenChange }: { open: boolean; onOpenChange
   }, [open])
 
   const handleGoogle = async () => {
-    await authClient.signIn.social({ provider: "google" })
+    await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" })
   }
 
   if (!open) return null
